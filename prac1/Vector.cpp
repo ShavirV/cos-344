@@ -98,7 +98,7 @@ template<int n>
 Vector<n> Vector<n>::operator*(const float scalar) const{
     Vector<n> prod;
     for (int i = 0; i < n; i++){
-        sum.arr[i] = this->arr[i] * scalar;
+        prod.arr[i] = this->arr[i] * scalar;
     }
 
     return prod;
@@ -165,7 +165,7 @@ Vector<n> Vector<n>::unitVector() const{
     Vector<n> unit;
 
     for (int i = 0; i < n; i++){
-        float.arr[i] = this->arr[i] / magnitude;
+        unit.arr[i] = this->arr[i] / magnitude;
     }
 
     return unit;
