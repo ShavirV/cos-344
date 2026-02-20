@@ -93,6 +93,7 @@ Vector<n> Vector<n>::operator-(const Vector<n> other) const{
     return diff;
 }
 
+//scalar product
 template<int n>
 Vector<n> Vector<n>::operator*(const float scalar) const{
     Vector<n> prod;
@@ -124,20 +125,50 @@ float Vector<n>::magnitude() const{
 }
 
 template<int n>
-Vector<n>operator Matrix<n,1>() const{
-
+Vector<n>::operator Matrix<n,1>() const{
+    //create a matrix from the passed in vector
+    Matrix<n,1> mat;
+    for (int i = 0; i < n; i++){
+        mat.arr[i][0] = this->arr[i];
+    }
+    return mat;
 }
 
-template<int n>
-Vector<3> Vector<n::crossProduct(const Vector<3>) const{
+template<>
+Vector<3> Vector<3>::crossProduct(const Vector<3> other) const{
+    //a1 a2 a3
+    //b1 b2 b3
+    Vector<3> prod;
+    float a1 = this->arr[0];
+    float a2 = this->arr[1];
+    float a3 = this->arr[2];
+    float b1 = other.arr[0];
+    float b2 = other.arr[1];
+    float b3 = other.arr[2];
 
+    prod.arr[0] = a2*b3 - a3*b2;
+    prod.arr[1] = a3*b1 - a1*b3;
+    prod.arr[2] = a1*b2 - a2*b1;
+
+    return prod;
 }
 
 template<int n>
 Vector<n> Vector<n>::unitVector() const{
-    if (this->magnitude() == 0){
-        throw("Invalid unit vector");
+    float magnitude = this->magnitude();
+
+    if (magnitude == 0){
+        throw std::runtime_error("Invalid unit vector");
     }
+
+    //divide all indices by magnitude
+    Vector<n> unit;
+
+    for (int i = 0; i < n; i++){
+        float.arr[i] = this->arr[i] / magnitude;
+    }
+
+    return unit;
 }
 
 template<int n>
