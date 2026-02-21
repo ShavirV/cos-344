@@ -77,7 +77,7 @@ template<int n>
 Vector<n> Vector<n>::operator+(const Vector<n> other) const{
     Vector<n> sum;
     for (int i = 0; i < n; i++){
-        sum.arr[i] = this->arr[i] + other->arr[i];
+        sum.arr[i] = this->arr[i] + other.arr[i];
     }
 
     return sum;
@@ -87,7 +87,7 @@ template<int n>
 Vector<n> Vector<n>::operator-(const Vector<n> other) const{
     Vector<n> diff;
     for (int i = 0; i < n; i++){
-        diff.arr[i] = this->arr[i] - other->arr[i];
+        diff.arr[i] = this->arr[i] - other.arr[i];
     }
 
     return diff;
@@ -109,7 +109,7 @@ template<int n>
 float Vector<n>::operator*(const Vector<n> other) const{
     float prod = 0;
     for (int i = 0; i < n; i++){
-        prod += this->arr[i] + other.arr[i];
+        prod += this->arr[i] * other.arr[i];
     }
     return prod;
 }

@@ -194,3 +194,4 @@ float Matrix<n,m>::determinant() const{
 
 //need a function that takes in indices to block out, and if i==blockx or j==blocky, skip
 //when copying over indices
+//this is some fuckass O(n!) type solution
