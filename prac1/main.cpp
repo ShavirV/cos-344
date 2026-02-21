@@ -1,8 +1,8 @@
 #include "Matrix.h"
 #include "Vector.h"
 #include "Shape.h"
-//#include "Triangle.h"
-//#include "Square.h"
+#include "Triangle.h"
+#include "Square.h"
 
 #include <iostream>
 #include <cassert>
@@ -408,6 +408,177 @@ void testMatrixBounds() {
     std::cout << "Bounds Checking OK\n";
 }
 
+/* ===============================
+   Triangle Tests
+   =============================== */
+
+void testTriangleConstructor()
+{
+    Vector<2> a{0,0};
+    Vector<2> b{1,0};
+    Vector<2> c{0,1};
+
+    Triangle<2> t(a,b,c);
+
+    assert(t.getNumPoints() == 6);
+
+    float* pts = t.getPoints();
+
+    assert(floatEqual(pts[0], 0));
+    assert(floatEqual(pts[1], 0));
+    assert(floatEqual(pts[2], 1));
+    assert(floatEqual(pts[3], 0));
+    assert(floatEqual(pts[4], 0));
+    assert(floatEqual(pts[5], 1));
+
+
+    std::cout << "Triangle Constructor OK\n";
+}
+
+void testTriangleCopyConstructor()
+{
+    Vector<2> a{0,0};
+    Vector<2> b{1,0};
+    Vector<2> c{0,1};
+
+    Triangle<2> t1(a,b,c);
+    Triangle<2> t2(t1);
+
+    float* pts = t2.getPoints();
+    assert(floatEqual(pts[2], 1));
+
+    std::cout << "Triangle Copy Constructor OK\n";
+}
+
+void testTriangleOperatorMultiplyEquals()
+{
+    Vector<2> a{1,0};
+    Vector<2> b{0,1};
+    Vector<2> c{-1,0};
+
+    Triangle<2> t(a,b,c);
+
+    Matrix<2,2> scale;
+    scale[0][0] = 2; scale[0][1] = 0;
+    scale[1][0] = 0; scale[1][1] = 2;
+
+    t *= scale;
+
+    float* pts = t.getPoints();
+
+    assert(floatEqual(pts[0], 2));
+    assert(floatEqual(pts[1], 0));
+    assert(floatEqual(pts[2], 0));
+    assert(floatEqual(pts[3], 2));
+
+
+    std::cout << "Triangle operator*= OK\n";
+}
+
+void testTriangleOperatorMultiply()
+{
+    Vector<2> a{1,0};
+    Vector<2> b{0,1};
+    Vector<2> c{-1,0};
+
+    Triangle<2> t(a,b,c);
+
+    Matrix<2,2> scale;
+    scale[0][0] = 3; scale[0][1] = 0;
+    scale[1][0] = 0; scale[1][1] = 3;
+
+    Triangle<2>* t2 = t * scale;
+
+    // original unchanged
+    float* pts1 = t.getPoints();
+    assert(floatEqual(pts1[0], 1));
+
+    // new triangle scaled
+    float* pts2 = t2->getPoints();
+    assert(floatEqual(pts2[0], 3));
+    assert(floatEqual(pts2[3], 3));
+
+    std::cout << "Triangle operator* OK\n";
+}
+
+/* ===============================
+   Square Tests
+   =============================== */
+
+void testSquareCenterConstructor()
+{
+    Vector<2> center{0,0};
+    Square<2> sq(center, 2.0f, 2.0f);
+
+    assert(sq.getNumPoints() == 8);
+
+    float* pts = sq.getPoints();
+
+    // top-left should be (-1,1)
+    assert(floatEqual(pts[0], -1));
+    assert(floatEqual(pts[1], 1));
+
+
+
+    std::cout << "Square Center Constructor OK\n";
+}
+
+void testSquareCopyConstructor()
+{
+    Vector<2> center{0,0};
+    Square<2> s1(center,2,2);
+    Square<2> s2(s1);
+
+    float* pts = s2.getPoints();
+    assert(floatEqual(pts[0], -1));
+
+    std::cout << "Square Copy Constructor OK\n";
+}
+
+void testSquareOperatorMultiplyEquals()
+{
+    Vector<2> center{0,0};
+    Square<2> sq(center,2,2);
+
+    Matrix<2,2> scale;
+    scale[0][0] = 2; scale[0][1] = 0;
+    scale[1][0] = 0; scale[1][1] = 2;
+
+    sq *= scale;
+
+    float* pts = sq.getPoints();
+
+    // original (-1,1) scaled → (-2,2)
+    assert(floatEqual(pts[0], -2));
+    assert(floatEqual(pts[1], 2));
+
+
+    std::cout << "Square operator*= OK\n";
+}
+
+void testSquareOperatorMultiply()
+{
+    Vector<2> center{0,0};
+    Square<2> sq(center,2,2);
+
+    Matrix<2,2> scale;
+    scale[0][0] = 3; scale[0][1] = 0;
+    scale[1][0] = 0; scale[1][1] = 3;
+
+    Square<2>* sq2 = sq * scale;
+
+    // original unchanged
+    float* pts1 = sq.getPoints();
+    assert(floatEqual(pts1[0], -1));
+
+    // scaled version
+    float* pts2 = sq2->getPoints();
+    assert(floatEqual(pts2[0], -3));
+
+
+    std::cout << "Square operator* OK\n";
+}
+
 int main() {
 
     testMatrixConstructorAndIndexing();
@@ -442,6 +613,19 @@ int main() {
     testVectorGetN();
 
     std::cout << "\nALL VECTOR TESTS PASSED!\n";
+    testTriangleConstructor();
+    testTriangleCopyConstructor();
+    testTriangleOperatorMultiplyEquals();
+    testTriangleOperatorMultiply();
+
+    std::cout << "\nALL TRIANGLE TESTS PASSED!\n";
+
+    testSquareCenterConstructor();
+    testSquareCopyConstructor();
+    testSquareOperatorMultiplyEquals();
+    testSquareOperatorMultiply();
+
+    std::cout << "\nALL SQUARE TESTS PASSED!\n";
 
     return 0;
 }

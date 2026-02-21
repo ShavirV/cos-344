@@ -55,7 +55,7 @@ Vector<n>::Vector(const Matrix<n,1> &mat){
     this->arr = new float[n];
 
     for (int i = 0; i < n; i++){
-        this->arr[i] = mat.arr[i][0];
+        this->arr[i] = mat[i][0];
     }
 }
 
@@ -129,7 +129,7 @@ Vector<n>::operator Matrix<n,1>() const{
     //create a matrix from the passed in vector
     Matrix<n,1> mat;
     for (int i = 0; i < n; i++){
-        mat.arr[i][0] = this->arr[i];
+        mat[i][0] = this->arr[i];
     }
     return mat;
 }

@@ -3,6 +3,7 @@
 
 #include <initializer_list>
 #include "Matrix.h"
+using namespace std;
 
 template<int n, int m>
 class Matrix;
