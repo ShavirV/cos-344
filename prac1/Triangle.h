@@ -26,6 +26,12 @@ class Triangle: public Shape<n> {
             cout << "_ P3 _ " << endl;
             p3.print();
         }
+
+        virtual void midPoint(float* coordinates) override;
+        virtual void setColour(char c) override;
+        virtual void move(char dir) override;
+        virtual void scale(char dir) override;   // was scaleUp
+        virtual void rotate(char dir) override;
 };
 
 #include "Triangle.cpp"
