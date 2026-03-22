@@ -1,4 +1,4 @@
-//shavir vallabh
+//shavir vallabhios
 //u23718146
 
 #include <stdio.h>
@@ -7,6 +7,7 @@
 #include <vector>
 #include <cmath>
 #include <string>
+#include <fstream>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -18,6 +19,7 @@
 #include "Polygon.h"
 #include "Vector.h"
 #include "Matrix.h"
+#include <cstring>
 
 using namespace std;
 
@@ -150,8 +152,24 @@ int selectedIdx   = -1; //index into renderers, -1 = none
 bool wireframe    = false;
 double lastEnter  = 0.0; //debounce Enter key
 
-//indices of the 4 selectable shapes
+//indices of the 6 selectable shapes. pac+1, tree+1, tree+2 used because compound shapes
 int idxBall = -1, idxLog = -1, idxRamp = -1, idxHole = -1; int idxPac = -1; int idxTree = -1;
+
+//momentum, space bar sends the ball:
+bool momentumCharged = false;
+const float MOMENTUM_MULT = 15.0f;
+
+
+//aabb stored as (cx, cy, halfwidth, halfheight)
+struct CircleBound { float x, y, r; }; 
+struct AABBBound   { float cx, cy, hw, hh; };
+
+vector<CircleBound> circleBounds;  //bushes
+vector<AABBBound>   aabbBounds; //logs
+
+const float GRASS_RADIUS = 0.98f;  //ball must stay within grass defined by this
+const float BALL_RADIUS  = 0.038f;
+
 
 //make a shape and add it to the global list, returning its index in the list
 int addShape(Shape<3>* s, Prim prim, int vertexCount, RGB col) {
@@ -166,6 +184,136 @@ int addShape(Shape<3>* s, Prim prim, int vertexCount, RGB col) {
     int idx = (int)renderers.size();
     renderers.push_back(sr);
     return idx;
+}
+
+void getBallCentre(float& bx, float& by) {
+    float coords[3] = {0,0,0};
+    renderers[idxBall].shape->midPoint(coords);
+    bx = coords[0];
+    by = coords[1];
+}
+
+bool ballCollides() {
+    float bx, by;
+    getBallCentre(bx, by);
+
+    // 1. Grass boundary
+    float distFromOrigin = std::sqrt(bx*bx + by*by);
+    if (distFromOrigin + BALL_RADIUS > GRASS_RADIUS)
+        return true;
+
+    // 2. Circle obstacles
+    for (auto& cb : circleBounds) {
+        float dx = bx - cb.x, dy = by - cb.y;
+        float dist = std::sqrt(dx*dx + dy*dy);
+        if (dist < BALL_RADIUS + cb.r)
+            return true;
+    }
+
+    // 3. AABB obstacles (Minkowski sum: expand AABB by ball radius)
+    for (auto& ab : aabbBounds) {
+        float left  = ab.cx - ab.hw - BALL_RADIUS;
+        float right = ab.cx + ab.hw + BALL_RADIUS;
+        float bot   = ab.cy - ab.hh - BALL_RADIUS;
+        float top   = ab.cy + ab.hh + BALL_RADIUS;
+        if (bx > left && bx < right && by > bot && by < top)
+            return true;
+    }
+
+    return false;
+}
+
+bool moveBallSafe(char dir) {
+    Shape<3>* ball = renderers[idxBall].shape;
+
+    int steps = momentumCharged ? (int)MOMENTUM_MULT : 1;
+    momentumCharged = false;  // consume charge regardless of outcome
+
+    for (int i = 0; i < steps; i++) {
+        ball->move(dir);
+        if (ballCollides()) {
+            // Undo this step with the opposite direction
+            char undo = dir;
+            if      (dir == 'w') undo = 's';
+            else if (dir == 's') undo = 'w';
+            else if (dir == 'a') undo = 'd';
+            else if (dir == 'd') undo = 'a';
+            ball->move(undo);
+            return false;  // stop trying further steps
+        }
+    }
+    return true;
+}
+
+void saveScreenshot() {
+    int w = WIN_W, h = WIN_H;
+    int rowBytes = w * 3;
+
+    //glReadPixels gives BGR bottom-to-top, BMP also wants bottom-to-top
+    //BUT BMP wants BGR, and GL_RGB gives us RGB, so we swap R and B per pixel
+    vector<unsigned char> buf(rowBytes * h);
+    glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, buf.data());
+
+    //swap R and B 
+    for (int i = 0; i < w * h; i++) {
+        unsigned char tmp = buf[i*3 + 0]; //R
+        buf[i*3 + 0] = buf[i*3 + 2]; //R = B
+        buf[i*3 + 2] = tmp; //B = R
+    }
+
+    //bmp requires multiple of 4 row bytes
+    int stride = (rowBytes + 3) & ~3;  //round up to nearest 4
+    int padding = stride - rowBytes;
+    int pixelDataSize = stride * h;
+
+    //BMP file header (14 bytes) + DIB header (40 bytes) = 54 bytes total
+    int fileSize = 54 + pixelDataSize;
+
+    unsigned char header[54] = {};
+
+    //i have no fucking idea man, we gotta write the header byte by byte
+    header[0] = 'B'; header[1] = 'M';
+    header[2] = fileSize & 0xFF;
+    header[3] = (fileSize >> 8)  & 0xFF;
+    header[4] = (fileSize >> 16) & 0xFF;
+    header[5] = (fileSize >> 24) & 0xFF;
+    // bytes 6-9: reserved, already 0
+    header[10] = 54;  //pixel offset
+
+    //bitmapinfo header starting at [14]
+    header[14] = 40;  //header size
+    header[18] = w & 0xFF; //cap height
+    header[19] = (w >> 8)  & 0xFF;
+    header[20] = (w >> 16) & 0xFF;
+    header[21] = (w >> 24) & 0xFF;
+    header[22] = h & 0xFF;
+    header[23] = (h >> 8)  & 0xFF;
+    header[24] = (h >> 16) & 0xFF;
+    header[25] = (h >> 24) & 0xFF;
+    header[26] = 1;   //colour planes
+    header[28] = 24;  //bits per pixel (RGB = 24)
+
+    //timestamped filename
+    time_t now = time(nullptr);
+    tm* t = localtime(&now);
+    char fname[64];
+    snprintf(fname, sizeof(fname), "screenshot_%02d%02d%02d.bmp",
+             t->tm_hour, t->tm_min, t->tm_sec);
+
+    FILE* f = fopen(fname, "wb");
+    if (!f) { cerr << "Could not open " << fname << "\n"; return; }
+
+    fwrite(header, 1, 54, f);
+
+    //write pixel rows bottom to top
+    unsigned char pad[3] = {0, 0, 0};
+    for (int row = 0; row < h; row++) {
+        fwrite(buf.data() + row * rowBytes, 1, rowBytes, f);
+        if (padding > 0) fwrite(pad, 1, padding, f);
+    }
+
+    fclose(f);
+    cout << "Screenshot saved: " << fname << "\n";
 }
 
 //helper to make a Vector<3> for homogeneous 2D: (x, y, 1)
@@ -383,6 +531,17 @@ void keyCallback(GLFWwindow* win, int key, int /*sc*/, int action, int /*mods*/)
                 }
                 return;
             }
+
+            case GLFW_KEY_P:
+                saveScreenshot();
+                return;
+
+            case GLFW_KEY_SPACE:
+                if (selectedIdx == idxBall) {
+                    momentumCharged = true;
+                }
+                return;
+
             case GLFW_KEY_ESCAPE:
                 glfwSetWindowShouldClose(win, GLFW_TRUE);
                 return;
@@ -391,15 +550,29 @@ void keyCallback(GLFWwindow* win, int key, int /*sc*/, int action, int /*mods*/)
     }
 
     //transformations
+    
     if (selectedIdx < 0) return;
     Shape<3>* s = renderers[selectedIdx].shape;
-
+    bool isBall = (selectedIdx == idxBall);
+    
     switch (key) {
         //WASD = translate
-        case GLFW_KEY_W: s->move('w'); break;
-        case GLFW_KEY_S: s->move('s'); break;
-        case GLFW_KEY_A: s->move('a'); break;
-        case GLFW_KEY_D: s->move('d'); break;
+        case GLFW_KEY_W:
+            if (isBall) moveBallSafe('w');
+            else s->move('w');
+            break;
+        case GLFW_KEY_S:
+            if (isBall) moveBallSafe('s');
+            else s->move('s');
+            break;
+        case GLFW_KEY_A:
+            if (isBall) moveBallSafe('a');
+            else s->move('a');
+            break;
+        case GLFW_KEY_D:
+            if (isBall) moveBallSafe('d');
+            else s->move('d');
+            break;
 
         //+/- = scale
         case GLFW_KEY_EQUAL:
