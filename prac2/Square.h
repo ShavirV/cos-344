@@ -31,6 +31,12 @@ class Square: public Shape<n> {
             cout << "_ P4 _ " << endl;
             bl.print();
         }
+
+        virtual void midPoint(float* coordinates) override;
+        virtual void setColour(char c) override;
+        virtual void move(char dir) override;
+        virtual void scale(char dir) override;
+        virtual void rotate(char dir) override;
 };
 
 #include "Square.cpp"

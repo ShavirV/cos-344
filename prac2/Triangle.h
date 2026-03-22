@@ -27,13 +27,13 @@ class Triangle: public Shape<n> {
             p3.print();
         }
 
-        virtual void select(); //1-4
-        virtual void deselect();
         virtual void move(char dir); //wasd
-        virtual void scaleUp(char dir); //+-
-        virtual void rotateLeft(char dir); //lr
+        virtual void scale(char dir); //+-
+        virtual void rotate(char dir); //lr
 
         virtual void midPoint(float* coordinates);
+
+        virtual void setColour(char c);
 };
 
 #include "Triangle.cpp"

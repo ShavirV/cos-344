@@ -135,7 +135,7 @@ Vector<n>::operator Matrix<n,1>() const{
 }
 
 template<>
-Vector<3> Vector<3>::crossProduct(const Vector<3> other) const{
+inline Vector<3> Vector<3>::crossProduct(const Vector<3> other) const{
     //a1 a2 a3
     //b1 b2 b3
     Vector<3> prod;

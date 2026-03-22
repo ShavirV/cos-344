@@ -50,7 +50,7 @@ public:
 
     Polygon(const Vector<n>& centre, float rad, int sides, float startAngle = -(float)PI/2.0f){
         this->sides = sides;
-        this->radius = radius;
+        this->radius = rad;
 
         //allocate memory 
         vertices.reserve(sides+2);
@@ -117,7 +117,7 @@ public:
     ///ACTUAL PRAC 2 FUNCTIONS
     
     //already stored in the thingy
-    virtual void midpoint(float* coordinates) override{
+    virtual void midPoint(float* coordinates) override{
         for (int i = 0; i < n; i++)
             coordinates[i] = vertices[0][i];
     }
@@ -148,7 +148,7 @@ public:
             // [1 0 dx]
             // [0 1 dy]
             // [0 0  1]
-        Matrix<n,n> T = Matrix::identity();
+        Matrix<n,n> T = Matrix<n,n>::identity();
         T[0][2] = dx;
         T[1][2] = dy;
 
@@ -159,24 +159,24 @@ public:
     virtual void scale(char dir) override {
         const float FACTOR_UP = 1.15f;
         const float FACTOR_DOWN = 1.0f / FACTOR_UP;
-        float s = (dir == "+") ? FACTOR_UP : FACTOR_DOWN;
+        float s = (dir == '+') ? FACTOR_UP : FACTOR_DOWN;
 
         //get the centre and transform
         float cx = vertices[0][0];
         float cy = vertices[0][1];
 
         //T(-centre): translate centre to origin
-        Matrix<n,n> Tneg;
+        Matrix<n,n> Tneg = Matrix<n,n>::identity() = Matrix<n,n>::identity();
         Tneg[0][2] = -cx;
         Tneg[1][2] = -cy;
 
         //S(s): uniform scale
-        Matrix<n,n> S;
+        Matrix<n,n> S = Matrix<n,n>::identity();
         S[0][0] = s;
         S[1][1] = s;
 
         //T(+centre): translate back
-        Matrix<n,n> Tpos;
+        Matrix<n,n> Tpos = Matrix<n,n>::identity();
         Tpos[0][2] = cx;
         Tpos[1][2] = cy;
 
@@ -191,7 +191,7 @@ public:
 
     virtual void rotate(char dir) override {
         const float ANGLE_STEP = 0.1f; //in radians, about 6 degrees
-        float angle = (dir == 'l') ANGLE_STEP : -ANGLE_STEP;
+        float angle = (dir == 'l') ? ANGLE_STEP : -ANGLE_STEP;
 
         float cx = vertices[0][0];
         float cy = vertices[0][1];
@@ -201,17 +201,17 @@ public:
         //same as scaling pretty much, just apply Cosa and Sina instead
 
         //T(-centre)
-        Matrix<n,n> Tneg;
+        Matrix<n,n> Tneg = Matrix<n,n>::identity();
         Tneg[0][2] = -cx;
         Tneg[1][2] = -cy;
 
         //R(angle)
-        Matrix<n,n> R;
+        Matrix<n,n> R = Matrix<n,n>::identity();
         R[0][0] =  cosA;  R[0][1] = -sinA;
         R[1][0] =  sinA;  R[1][1] =  cosA;
 
         //T(+centre)
-        Matrix<n,n> Tpos;
+        Matrix<n,n> Tpos = Matrix<n,n>::identity();
         Tpos[0][2] = cx;
         Tpos[1][2] = cy;
 
@@ -229,10 +229,14 @@ public:
         }
     }
 
+    virtual void setColour(char c) override {
+        this->colour = std::string(1, c);
+    } 
 
 
 
-}
+
+};
 
 
 #endif

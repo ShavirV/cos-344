@@ -1,16 +1,24 @@
-#add all the files that you need to the files makefile variable below as a space seperated list
-files = 
+# COS344 Practical 2
+# Removed glad.c - project uses GLEW (-lGLEW) which is already installed.
+# glad.c is only needed if you #include <glad/glad.h>, which this project doesn't.
 
-main: main.cpp glad.c
-	g++ -g Shader.cpp $(files) main.cpp glad.c -lglfw3 -pthread -lGLEW -ldl -lGL -o main
+files = shader.cpp Triangle.cpp Square.cpp
+
+CXX = g++
+CXXFLAGS = -std=c++11 -g -Wall
+
+LIBS = -lglfw -lGLEW -lGL -ldl -lpthread
+
+main: main.cpp $(files)
+	$(CXX) $(CXXFLAGS) main.cpp $(files) $(LIBS) -o main
+
+run: main
+	./main
 
 clean:
 	rm -f *.o main
 
-run:
-	./main
-
 all:
-	make clean
-	make
-	make run
+	$(MAKE) clean
+	$(MAKE)
+	$(MAKE) run
