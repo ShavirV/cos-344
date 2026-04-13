@@ -122,7 +122,7 @@ void buildCourse() {
 
     //Tree 2
     add(new Mesh(makeCylinder(0.18f, 1.2f, 8, cTreeTrunk)),
-        mat4::translate(-3.5f, 0.0f, -3.0f));
+        mat4::translate(-3.5f, 0.0f, -2.0f));
     add(new Mesh(makeCone(0.65f, 2.0f, 8, cTreeTop)),
         mat4::translate(-3.5f, 1.2f, -2.0f));
 
@@ -135,7 +135,7 @@ void buildCourse() {
         add(new Mesh(makeSphere(0.15f, 8, 8, col)),
             mat4::translate(x, 0.55f, z));
     };
-    
+
 RGB3 flowerPalette[] = {
     cFlowerPink,
     cFlowerRose,
@@ -154,14 +154,14 @@ RGB3 flowerPalette[] = {
 const int paletteSize = sizeof(flowerPalette) / sizeof(flowerPalette[0]);
 
 for (int i = 0; i < 50; i++) {
-    float x = -6.0f + static_cast<float>(rand()) / RAND_MAX * 11.0f;
+    float x = -5.5f + static_cast<float>(rand()) / RAND_MAX * 11.0f;
 
-    float z = -10.0f + static_cast<float>(rand()) / RAND_MAX * 20.0f;
+    float z = -9.5f + static_cast<float>(rand()) / RAND_MAX * 19.0f;
 
     RGB3 colour = flowerPalette[rand() % paletteSize];
 
     makeFlower(x, z, colour);
-}
+    }
 }
 
 void buildWindmill() {
@@ -170,13 +170,11 @@ void buildWindmill() {
         return mat4::translate(0, 0, 2.0f) * local;
     };
 
-    //Base platform (raised octagonal frustum)
+    //base platform
     add(new Mesh(makeFrustumColoured(1.8f, 1.6f, 0.3f, 8, cWood, cWood)),
         W(mat4::translate(0,0,0)));
 
-    //4 diagonal support struts (triangular prisms)
-    //These lean out from the base – represented as thin triangular prisms
-    //rotated to angle outward, one on each cardinal side
+    //diagonal support struts
     {
         float strutAngles[4] = {0, (float)M_PI/2, (float)M_PI, 3*(float)M_PI/2};
         for (int i=0; i<4; i++) {
