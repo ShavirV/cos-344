@@ -36,179 +36,155 @@ double lastTime  = 0.0;
 
 struct SceneObject {
     Mesh* mesh;
-    Mat4  local;       // local-to-world placement (before worldMatrix)
-    bool  isBlade;     // receives blade spin on top of local
+    Mat4  local;       
+    bool  isBlade;     
 };
 
 vector<SceneObject> scene;
 
-// Blade axis in the windmill's local space.
-// The blades rotate around Z (they face toward +Z, spin in XY plane).
-// This is the axis in LOCAL blade space; we pass it through worldMatrix
-// for the actual rotation so it stays correct after world rotations.
 const Vec3 BLADE_AXIS = {0.0f, 0.0f, 1.0f};
 
-// Position of the axle in world space (before worldMatrix)
-// Blades spin around this point.
+
 const Vec3 BLADE_PIVOT = {0.0f, 5.8f, 0.52f};
 
-// ---------------------------------------------------------------------------
-// Colours matching De Zwaan reference photo
-// ---------------------------------------------------------------------------
-const RGB3 cWhite      = {0.95f, 0.95f, 0.93f}; // tower cladding
-const RGB3 cDarkGreen  = {0.10f, 0.20f, 0.12f}; // dark trim / cap
-const RGB3 cBladeFrame = {0.08f, 0.08f, 0.08f}; // black blade frame
-const RGB3 cBladeSail  = {0.92f, 0.90f, 0.82f}; // cream sail panel
-const RGB3 cMetal      = {0.55f, 0.60f, 0.62f}; // metallic axle
-const RGB3 cWood       = {0.60f, 0.42f, 0.22f}; // wooden base/struts
-const RGB3 cGrass      = {0.18f, 0.58f, 0.18f}; // course surface
-const RGB3 cWall       = {0.45f, 0.35f, 0.28f}; // boundary walls (distinct)
-const RGB3 cStartMat   = {0.85f, 0.70f, 0.15f}; // yellow starting mat
-const RGB3 cHole       = {0.10f, 0.10f, 0.10f}; // dark golf hole
-const RGB3 cBall       = {0.98f, 0.98f, 0.98f}; // white golf ball
-const RGB3 cFlowerPink = {0.98f, 0.45f, 0.65f}; // pink flower heads
-const RGB3 cStem       = {0.15f, 0.55f, 0.15f}; // flower stem green
-const RGB3 cTreeTrunk  = {0.40f, 0.28f, 0.12f}; // tree trunk brown
-const RGB3 cTreeTop    = {0.08f, 0.38f, 0.08f}; // dark tree green
+const RGB3 cWhite      = {0.95f, 0.95f, 0.93f}; //tower
+const RGB3 cDarkGreen  = {0.10f, 0.20f, 0.12f}; //dark trim
+const RGB3 cBladeFrame = {0.08f, 0.08f, 0.08f}; //black 
+const RGB3 cBladeSail  = {0.92f, 0.90f, 0.82f}; //cream panel
+const RGB3 cMetal      = {0.55f, 0.60f, 0.62f}; //metallic axle
+const RGB3 cWood       = {0.60f, 0.42f, 0.22f}; //wooden base/struts
+const RGB3 cGrass      = {0.18f, 0.58f, 0.18f}; //ourse surface
+const RGB3 cWall       = {0.45f, 0.35f, 0.28f}; //boundary walls 
+const RGB3 cStartMat   = {0.85f, 0.70f, 0.15f}; //yellow starting mat
+const RGB3 cHole       = {0.10f, 0.10f, 0.10f}; //dark golf hole
+const RGB3 cBall       = {0.98f, 0.98f, 0.98f}; //white golf ball
+const RGB3 cFlowerPink = {0.98f, 0.45f, 0.65f}; //pink flower heads
+const RGB3 cStem       = {0.15f, 0.55f, 0.15f}; //flower stem green
+const RGB3 cTreeTrunk  = {0.40f, 0.28f, 0.12f}; //tree trunk brown
+const RGB3 cTreeTop    = {0.08f, 0.38f, 0.08f}; //dark tree green
+const RGB3 cFlowerRose        = {0.96f, 0.68f, 0.76f};
+const RGB3 cFlowerLavender    = {0.84f, 0.78f, 0.96f};
+const RGB3 cFlowerLilac       = {0.78f, 0.72f, 0.92f};
+const RGB3 cFlowerPeach       = {1.00f, 0.82f, 0.68f};
+const RGB3 cFlowerApricot     = {1.00f, 0.76f, 0.60f};
+const RGB3 cFlowerButtercream = {1.00f, 0.96f, 0.72f};
+const RGB3 cFlowerLemon       = {0.98f, 0.94f, 0.62f};
+const RGB3 cFlowerMint        = {0.76f, 0.94f, 0.80f};
+const RGB3 cFlowerSage        = {0.70f, 0.86f, 0.72f};
+const RGB3 cFlowerSky         = {0.72f, 0.88f, 1.00f};
+const RGB3 cFlowerPeriwinkle  = {0.74f, 0.80f, 0.98f};
+const RGB3 cFlowerCream       = {1.00f, 0.98f, 0.90f};
+const RGB3 cFlowerBlush       = {0.98f, 0.88f, 0.90f};
 
-// ---------------------------------------------------------------------------
-// Helper: add a scene object
-// ---------------------------------------------------------------------------
 static void add(Mesh* m, Mat4 local, bool blade=false) {
     scene.push_back({m, local, blade});
 }
 
-// ---------------------------------------------------------------------------
-// Course construction
-// ---------------------------------------------------------------------------
-/*
- * Course layout (XZ plane, Y=0 is ground level):
- *
- *   Z
- *   ^
- *   |  [tree] [flower]   [WINDMILL]   [flower] [tree]
- *   |
- *   |  +--wall--+--wall--+  tunnel  +--wall--+--wall--+
- *   |  |                                               |
- *   |  |   [ball]                        [hole]        |
- *   |  |                                               |
- *   |  +--wall-----------+----------wall--------------+
- *   |         [start mat here]
- *   +-----------------------------------------------------------> X
- *
- * Course centre at (0, 0, 0). Extends ±6 in X, ±10 in Z.
- * Windmill sits at (0, 0, 2) — middle of course, forward of centre.
- * Tunnel through south wall of windmill base along Z axis.
- */
-
 void buildCourse() {
-    // ---- Ground surface ----
+    //Ground surface
     add(new Mesh(makeCuboid(12.0f, 0.2f, 20.0f, cGrass)),
         mat4::translate(0, -0.1f, 0));
 
-    // ---- Boundary walls ----
-    // North wall
+    //Boundary walls
+    //North wall
     add(new Mesh(makeCuboid(12.0f, 0.6f, 0.3f, cWall)),
         mat4::translate(0, 0.3f, -10.0f));
-    // South wall – split into two pieces to leave tunnel gap (1.2 units wide)
+    //South wall split in two
     add(new Mesh(makeCuboid(4.9f, 0.6f, 0.3f, cWall)),
         mat4::translate(-3.55f, 0.3f, 10.0f));
     add(new Mesh(makeCuboid(4.9f, 0.6f, 0.3f, cWall)),
         mat4::translate( 3.55f, 0.3f, 10.0f));
-    // East wall
+    //East wall
     add(new Mesh(makeCuboid(0.3f, 0.6f, 20.0f, cWall)),
         mat4::translate(6.0f, 0.3f, 0));
-    // West wall
+    //West wall
     add(new Mesh(makeCuboid(0.3f, 0.6f, 20.0f, cWall)),
         mat4::translate(-6.0f, 0.3f, 0));
 
-    // ---- Starting mat (south end, distinct yellow) ----
+    //Starting mat (south end, distinct yellow)
     add(new Mesh(makeCuboid(1.4f, 0.05f, 1.4f, cStartMat)),
         mat4::translate(0, 0.11f, 8.5f));
 
-    // ---- Golf hole (cylinder, spec-required) ----
+    //Golf hole (cylinder, spec-required)
     add(new Mesh(makeCylinder(0.25f, 0.15f, 16, cHole)),
         mat4::translate(-2.5f, 0.0f, -7.5f));
 
-    // ---- Golf ball (sphere, bonus spec item) ----
-    // Starts at starting mat
+    //Golf ball (sphere, bonus spec item)
+    //Starts at starting mat
     add(new Mesh(makeSphere(0.18f, 10, 10, cBall)),
         mat4::translate(0, 0.18f, 8.5f));
 
-    // ---- Decorations outside boundary: 2 trees ----
-    // Tree 1 – east outside
+    //Tree 1 
     add(new Mesh(makeCylinder(0.18f, 1.2f, 8, cTreeTrunk)),
-        mat4::translate(7.5f, 0.0f, -3.0f));
+        mat4::translate(3.5f, 0.0f, -3.0f));
     add(new Mesh(makeCone(0.65f, 2.0f, 8, cTreeTop)),
-        mat4::translate(7.5f, 1.2f, -3.0f));
+        mat4::translate(3.5f, 1.2f, -3.0f));
 
-    // Tree 2 – west outside
+    //Tree 2
     add(new Mesh(makeCylinder(0.18f, 1.2f, 8, cTreeTrunk)),
-        mat4::translate(-7.5f, 0.0f, -3.0f));
+        mat4::translate(-3.5f, 0.0f, -3.0f));
     add(new Mesh(makeCone(0.65f, 2.0f, 8, cTreeTop)),
-        mat4::translate(-7.5f, 1.2f, -3.0f));
+        mat4::translate(-3.5f, 1.2f, -2.0f));
 
-    // ---- Pink flowers (bonus) – inside course near walls ----
-    auto makeFlower = [&](float x, float z) {
-        // Stem
+    //Pink flowers
+    auto makeFlower = [&](float x, float z, RGB3 col) {
+        //Stem
         add(new Mesh(makeCylinder(0.04f, 0.4f, 8, cStem)),
             mat4::translate(x, 0.0f, z));
-        // Head (small sphere)
-        add(new Mesh(makeSphere(0.15f, 8, 8, cFlowerPink)),
+        //Head (small sphere)
+        add(new Mesh(makeSphere(0.15f, 8, 8, col)),
             mat4::translate(x, 0.55f, z));
     };
-    makeFlower( 4.5f,  6.0f);
-    makeFlower(-4.5f,  6.0f);
-    makeFlower( 4.5f, -6.0f);
+    
+RGB3 flowerPalette[] = {
+    cFlowerPink,
+    cFlowerRose,
+    cFlowerLavender,
+    cFlowerLilac,
+    cFlowerPeach,
+    cFlowerApricot,
+    cFlowerButtercream,
+    cFlowerLemon,
+    cFlowerMint,
+    cFlowerSky,
+    cFlowerCream,
+    cFlowerPeriwinkle,
+    cFlowerBlush
+};
+const int paletteSize = sizeof(flowerPalette) / sizeof(flowerPalette[0]);
+
+for (int i = 0; i < 50; i++) {
+    float x = -6.0f + static_cast<float>(rand()) / RAND_MAX * 11.0f;
+
+    float z = -10.0f + static_cast<float>(rand()) / RAND_MAX * 20.0f;
+
+    RGB3 colour = flowerPalette[rand() % paletteSize];
+
+    makeFlower(x, z, colour);
+}
 }
 
-// ---------------------------------------------------------------------------
-// Windmill construction
-// ---------------------------------------------------------------------------
-/*
- * All windmill parts are placed relative to a local origin at the
- * centre of the windmill base (0, 0, 2) in world space.
- * We pass mat4::translate(0, 0, 2) * shapeLocal as each part's matrix.
- *
- * WINDMILL LAYOUT (Y = height above course ground):
- *   y=0.00 – ground level
- *   y=0.00 – base platform top face
- *   y=0.30 – tower starts
- *   y=0.50 – tunnel floor (ball rolls through here)
- *   y=4.20 – balcony ring
- *   y=4.80 – cap starts
- *   y=5.50 – cap ends / cone roof starts
- *   y=6.50 – cone apex
- *   y=5.80 – axle protrudes forward (z+0.5)
- *
- * TUNNEL: The base frustum has rBot=1.3, gap cut by leaving the front
- * face of the base open (the frustum geometry doesn't cover it).
- * Two wall cuboids flank the gap in the south wall of the base.
- *
- * BLADES: 4 blades at 90° apart, each a frame cuboid + sail cuboid.
- * They spin around the axle (BLADE_PIVOT, BLADE_AXIS=Z).
- */
 void buildWindmill() {
-    // Windmill world offset
+    //Windmill world offset
     auto W = [](Mat4 local) -> Mat4 {
         return mat4::translate(0, 0, 2.0f) * local;
     };
 
-    // ---- Base platform (raised octagonal frustum) ----
+    //Base platform (raised octagonal frustum)
     add(new Mesh(makeFrustumColoured(1.8f, 1.6f, 0.3f, 8, cWood, cWood)),
         W(mat4::translate(0,0,0)));
 
-    // ---- 4 diagonal support struts (triangular prisms) ----
-    // These lean out from the base – represented as thin triangular prisms
-    // rotated to angle outward, one on each cardinal side
+    //4 diagonal support struts (triangular prisms)
+    //These lean out from the base – represented as thin triangular prisms
+    //rotated to angle outward, one on each cardinal side
     {
         float strutAngles[4] = {0, (float)M_PI/2, (float)M_PI, 3*(float)M_PI/2};
         for (int i=0; i<4; i++) {
             float a = strutAngles[i];
-            // Strut leans outward at 30 degrees from vertical
+            //Strut leans outward at 30 degrees from vertical
             Mat4 local = mat4::translate(cosf(a)*1.1f, 0, sinf(a)*1.1f)
                        * mat4::rotateY(-a)
-                       * mat4::rotateZ((float)M_PI/6.0f);  // lean 30 deg
+                       * mat4::rotateZ((float)M_PI/6.0f);  //lean 30 deg
             add(new Mesh(makeTriangularPrism(0.12f, 1.2f, 0.12f, cWood)),
                 W(local));
         }
@@ -265,8 +241,8 @@ void buildWindmill() {
 
     //axle cylinder
     add(new Mesh(makeCylinderColoured(0.10f, 1.0f, 12, cMetal, cMetal)),
-        W(mat4::translate(0, 5.8f, -0.1f)   // centre it
-          * mat4::rotateX((float)M_PI/2)));  // rotate so axis points +Z
+        W(mat4::translate(0, 5.8f, -0.1f)   //centre it
+          * mat4::rotateX((float)M_PI/2)));  //rotate so axis points +Z
 
     //rotor centre
     add(new Mesh(makeCylinder(0.22f, 0.15f, 12, cMetal)),
@@ -283,7 +259,7 @@ void buildWindmill() {
             Mat4 bladeBase =
                 mat4::translate(BLADE_PIVOT.x, BLADE_PIVOT.y, BLADE_PIVOT.z)
               * mat4::rotateZ(initialAngle)
-              * mat4::translate(0, 0.0f, 0);  // root at pivot
+              * mat4::translate(0, 0.0f, 0);  //root at pivot
 
             add(new Mesh(makeBlade(2.8f, 0.14f, 0.06f, cBladeFrame)),
                 W(bladeBase), true);
@@ -312,7 +288,7 @@ const char *getError()
 
 inline void startUpGLFW()
 {
-    glewExperimental = true; // Needed for core profile
+    glewExperimental = true; //Needed for core profile
     if (!glfwInit())
     {
         throw getError();
@@ -321,7 +297,7 @@ inline void startUpGLFW()
 
 inline void startUpGLEW()
 {
-    glewExperimental = true; // Needed in core profile
+    glewExperimental = true; //Needed in core profile
     if (glewInit() != GLEW_OK)
     {
         glfwTerminate();
@@ -331,12 +307,12 @@ inline void startUpGLEW()
 
 GLFWwindow* setUp() {
     startUpGLFW();
-    glfwWindowHint(GLFW_SAMPLES, 4);               // 4x antialiasing
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
+    glfwWindowHint(GLFW_SAMPLES, 4);               //4x antialiasing
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); //We want OpenGL 3.3
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);           // To make MacOS happy; should not be needed
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
-    GLFWwindow *window;                                            // (In the accompanying source code, this variable is global for simplicity)
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);           //To make MacOS happy; should not be needed
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); //We don't want the old OpenGL
+    GLFWwindow *window;                                            //(In the accompanying source code, this variable is global for simplicity)
     window = glfwCreateWindow(WIN_W, WIN_H, "u23718146", nullptr, nullptr);
     if (window == NULL)
     {
@@ -344,7 +320,7 @@ GLFWwindow* setUp() {
         glfwTerminate();
         throw "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n";
     }
-    glfwMakeContextCurrent(window); // Initialize GLEW
+    glfwMakeContextCurrent(window); //Initialize GLEW
     startUpGLEW();
     return window;
 }
@@ -357,7 +333,7 @@ void keyCallback(GLFWwindow* win, int key, int, int action, int) {
     if (action == GLFW_RELEASE) return;
 
     switch(key) {
-        // World rotations (pre-multiply = world-space axes stay fixed)
+        //World rotations (pre-multiply = world-space axes stay fixed)
         case GLFW_KEY_W: worldMatrix = mat4::rotateX(-ROT_STEP)*worldMatrix; break;
         case GLFW_KEY_S: worldMatrix = mat4::rotateX( ROT_STEP)*worldMatrix; break;
         case GLFW_KEY_A: worldMatrix = mat4::rotateY(-ROT_STEP)*worldMatrix; break;
@@ -365,7 +341,7 @@ void keyCallback(GLFWwindow* win, int key, int, int action, int) {
         case GLFW_KEY_E: worldMatrix = mat4::rotateZ(-ROT_STEP)*worldMatrix; break;
         case GLFW_KEY_Q: worldMatrix = mat4::rotateZ( ROT_STEP)*worldMatrix; break;
 
-        // World translations
+        //World translations
         case GLFW_KEY_I: worldMatrix = mat4::translate(0, TRANS_STEP,0)*worldMatrix; break;
         case GLFW_KEY_K: worldMatrix = mat4::translate(0,-TRANS_STEP,0)*worldMatrix; break;
         case GLFW_KEY_L: worldMatrix = mat4::translate( TRANS_STEP,0,0)*worldMatrix; break;
@@ -373,7 +349,7 @@ void keyCallback(GLFWwindow* win, int key, int, int action, int) {
         case GLFW_KEY_O: worldMatrix = mat4::translate(0,0, TRANS_STEP)*worldMatrix; break;
         case GLFW_KEY_U: worldMatrix = mat4::translate(0,0,-TRANS_STEP)*worldMatrix; break;
 
-        // Blade speed
+        //Blade speed
         case GLFW_KEY_EQUAL:
         case GLFW_KEY_KP_ADD:
             bladeSpeed += 0.4f;
@@ -384,7 +360,7 @@ void keyCallback(GLFWwindow* win, int key, int, int action, int) {
             if (bladeSpeed < 0.0f) bladeSpeed = 0.0f;
             break;
 
-        // Wireframe toggle (debounced)
+        //Wireframe toggle (debounced)
         case GLFW_KEY_ENTER:
             if (action == GLFW_PRESS) {
                 double now = glfwGetTime();
@@ -463,7 +439,7 @@ int main() {
          //the blades initialAngle is already baked into its localMatrix
         Mat4 pivotFwd = mat4::translate( BLADE_PIVOT.x,
                                          BLADE_PIVOT.y,
-                                         BLADE_PIVOT.z + 2.0f); // +2 for wm offset
+                                         BLADE_PIVOT.z + 2.0f); //+2 for wm offset
         Mat4 pivotBck = mat4::translate(-BLADE_PIVOT.x,
                                         -BLADE_PIVOT.y,
                                         -BLADE_PIVOT.z - 2.0f);

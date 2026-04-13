@@ -1,36 +1,6 @@
 #ifndef MESH_HPP
 #define MESH_HPP
 
-/*
- * Mesh.hpp  –  GPU-side storage for a single 3D shape
- * =====================================================
- * A Mesh owns one VAO + two VBOs:
- *   filledVBO  – vertices for GL_TRIANGLES (filled rendering)
- *   wireVBO    – vertex PAIRS for GL_LINES  (wireframe, no glPolygonMode)
- *
- * Vertex layout in both buffers (6 floats per vertex):
- *   [ x, y, z,  r, g, b ]
- *
- * Attribute locations:
- *   0 → position (vec3)
- *   1 → colour   (vec3)
- *
- * WIREFRAME STRATEGY
- * ------------------
- * For every triangle (v0, v1, v2) added via addTriangle(), we also
- * add three line-segment pairs to the wire buffer:
- *   v0→v1,  v1→v2,  v2→v0
- * This satisfies the spec requirement of GL_LINES (not glPolygonMode).
- *
- * USAGE
- * -----
- *   Mesh m;
- *   m.addTriangle(v0, v1, v2, colour);   // call for each triangle
- *   m.upload();                           // once, after all triangles added
- *   // each frame:
- *   m.draw(wireframe);
- */
-
 #include <vector>
 #include <GL/glew.h>
 #include "Mat4.hpp"
@@ -44,11 +14,11 @@ public:
 
     ~Mesh() { free(); }
 
-    // Disable copy (owns GPU resources)
+    //Disable copy (owns GPU resources)
     Mesh(const Mesh&) = delete;
     Mesh& operator=(const Mesh&) = delete;
 
-    // Move constructor so we can store Meshes in vectors
+    //Move constructor so we can store Meshes in vectors
     Mesh(Mesh&& o) noexcept
         : vao(o.vao), filledVBO(o.filledVBO), wireVBO(o.wireVBO),
           filledCount(o.filledCount), wireCount(o.wireCount),
@@ -57,14 +27,6 @@ public:
     {
         o.vao = o.filledVBO = o.wireVBO = 0;
     }
-
-    /*
-     * addTriangle(a, b, c, col)
-     * -------------------------
-     * Append one triangle to the filled buffer and its 3 edges to the
-     * wire buffer. Call this for every triangle in the shape.
-     * Winding: pass vertices in CCW order for correct front-face culling.
-     */
     void addTriangle(Vec3 a, Vec3 b, Vec3 c, RGB3 col) {
         pushVert(filledData, a, col);
         pushVert(filledData, b, col);
@@ -76,13 +38,6 @@ public:
         pushVert(wireData, c, col); pushVert(wireData, a, col);
     }
 
-    /*
-     * upload()
-     * --------
-     * Send both buffers to the GPU. Call once after all addTriangle()
-     * calls. Uses GL_STATIC_DRAW since shape geometry never changes —
-     * transforms are applied via the model uniform, not by re-uploading.
-     */
     void upload() {
         free(); // delete existing GPU objects if any
 
@@ -115,13 +70,6 @@ public:
         wireData.clear();   wireData.shrink_to_fit();
     }
 
-    /*
-     * draw(wireframe)
-     * ---------------
-     * Bind the appropriate VBO and issue a draw call.
-     * The caller is responsible for binding the shader and setting uniforms
-     * (including the model matrix) before calling draw().
-     */
     void draw(bool wireframe) const {
         if (!vao) return;
         glBindVertexArray(vao);

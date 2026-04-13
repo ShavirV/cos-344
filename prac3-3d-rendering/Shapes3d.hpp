@@ -1,26 +1,6 @@
 #ifndef SHAPES3D_HPP
 #define SHAPES3D_HPP
 
-/*
- * Shapes3D.hpp  –  All 3D primitive factories for COS344 P3
- * ==========================================================
- * Reference windmill: De Zwaan (Holland, Michigan) – Dutch-style octagonal
- * tapered tower, dark cap, white blades with black frames, balcony platform.
- *
- * Shapes provided:
- *   makeCuboid            – axis-aligned box
- *   makeTriangularPrism   – triangular cross-section prism
- *   makeCylinder          – spec requires ≥8 segments
- *   makeCone              – spec requires ≥8 segments
- *   makeFrustum           – truncated cone (tapered tower body)
- *   makeSphere            – lat/lon tessellation (golf ball)
- *   makeBlade             – flat elongated cuboid (windmill sail)
- *   makeBladeSpar         – thin dark frame bar for Dutch-style blade
- *
- * All geometry in LOCAL space centred at origin unless noted.
- * All triangles use CCW winding viewed from outside.
- */
-
 #include "Mesh.hpp"
 #include <cmath>
 #include <vector>
@@ -29,19 +9,13 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
+//helpers
 static void addQuad(Mesh& m,
                     Vec3 v0, Vec3 v1, Vec3 v2, Vec3 v3, RGB3 col) {
     m.addTriangle(v0, v1, v2, col);
     m.addTriangle(v0, v2, v3, col);
 }
 
-// ---------------------------------------------------------------------------
-// Cuboid
-// Centred at origin. w=width(X), h=height(Y), d=depth(Z).
-// ---------------------------------------------------------------------------
 inline Mesh makeCuboid(float w, float h, float d, RGB3 col) {
     Mesh m;
     float hw=w*.5f, hh=h*.5f, hd=d*.5f;
@@ -58,7 +32,7 @@ inline Mesh makeCuboid(float w, float h, float d, RGB3 col) {
     m.upload(); return m;
 }
 
-// Per-face colour cuboid (front,back,left,right,top,bottom)
+//per-face colour cuboid (front,back,left,right,top,bottom)
 inline Mesh makeCuboidColoured(float w, float h, float d, RGB3 c[6]) {
     Mesh m;
     float hw=w*.5f, hh=h*.5f, hd=d*.5f;
@@ -75,11 +49,7 @@ inline Mesh makeCuboidColoured(float w, float h, float d, RGB3 c[6]) {
     m.upload(); return m;
 }
 
-// ---------------------------------------------------------------------------
-// Triangular Prism
-// Isoceles triangle cross-section. Base at y=0, top at y=h.
-// w = base width (X), d = depth (Z, apex at -d/2, base edge at +d/2).
-// ---------------------------------------------------------------------------
+
 inline Mesh makeTriangularPrism(float w, float h, float d, RGB3 col) {
     Mesh m;
     float hw=w*.5f, hd=d*.5f;
@@ -93,9 +63,6 @@ inline Mesh makeTriangularPrism(float w, float h, float d, RGB3 col) {
     m.upload(); return m;
 }
 
-// ---------------------------------------------------------------------------
-// Cylinder  (axis = Y, base at y=0, top at y=h, segs ≥ 8)
-// ---------------------------------------------------------------------------
 inline Mesh makeCylinder(float r, float h, int segs, RGB3 col) {
     if (segs<8) segs=8;
     Mesh m;
@@ -134,9 +101,7 @@ inline Mesh makeCylinderColoured(float r, float h, int segs,
     m.upload(); return m;
 }
 
-// ---------------------------------------------------------------------------
-// Cone  (axis = Y, base at y=0, apex at y=h, segs ≥ 8)
-// ---------------------------------------------------------------------------
+
 inline Mesh makeCone(float r, float h, int segs, RGB3 col) {
     if (segs<8) segs=8;
     Mesh m;
@@ -152,12 +117,7 @@ inline Mesh makeCone(float r, float h, int segs, RGB3 col) {
     m.upload(); return m;
 }
 
-// ---------------------------------------------------------------------------
-// Frustum  –  truncated cone (tapered tower body)
-// rBot = bottom radius, rTop = top radius, h = height, segs ≥ 8
-// Used for the octagonal windmill tower (use segs=8).
-// Base at y=0, top at y=h.
-// ---------------------------------------------------------------------------
+//funny truncated cone thing that the windmill is made out of
 inline Mesh makeFrustum(float rBot, float rTop, float h, int segs, RGB3 col) {
     if (segs<8) segs=8;
     Mesh m;
@@ -176,7 +136,7 @@ inline Mesh makeFrustum(float rBot, float rTop, float h, int segs, RGB3 col) {
     m.upload(); return m;
 }
 
-// Two-colour frustum: side face vs cap colours
+//two-colour frustum side face vs cap colours
 inline Mesh makeFrustumColoured(float rBot, float rTop, float h, int segs,
                                  RGB3 sideCol, RGB3 capCol) {
     if (segs<8) segs=8;
@@ -196,12 +156,7 @@ inline Mesh makeFrustumColoured(float rBot, float rTop, float h, int segs,
     m.upload(); return m;
 }
 
-// ---------------------------------------------------------------------------
-// Sphere  –  lat/lon tessellation (golf ball, flower heads)
-// r = radius, latSegs = latitude bands, lonSegs = longitude slices.
-// For low-poly golf ball use latSegs=8, lonSegs=8.
-// Centred at origin.
-// ---------------------------------------------------------------------------
+//sphere using lat lon tesselation
 inline Mesh makeSphere(float r, int latSegs, int lonSegs, RGB3 col) {
     if (latSegs<4) latSegs=4;
     if (lonSegs<4) lonSegs=4;
@@ -209,13 +164,13 @@ inline Mesh makeSphere(float r, int latSegs, int lonSegs, RGB3 col) {
 
     // latSegs bands between poles → latSegs+1 rings of vertices
     for (int lat=0; lat<latSegs; lat++) {
-        float theta0 = (float)M_PI * lat       / latSegs;  // 0..PI
-        float theta1 = (float)M_PI * (lat+1)   / latSegs;
+        float theta0 = (float)M_PI * lat / latSegs;  // 0..PI
+        float theta1 = (float)M_PI * (lat+1) / latSegs;
 
         float y0 = r * cosf(theta0);
         float y1 = r * cosf(theta1);
-        float r0 = r * sinf(theta0);  // ring radius at lat band bottom
-        float r1 = r * sinf(theta1);  // ring radius at lat band top
+        float r0 = r * sinf(theta0);  //ring radius at lat band bottom
+        float r1 = r * sinf(theta1);  //ring radius at lat band top
 
         for (int lon=0; lon<lonSegs; lon++) {
             float phi0 = 2.f*(float)M_PI * lon       / lonSegs;
@@ -226,13 +181,13 @@ inline Mesh makeSphere(float r, int latSegs, int lonSegs, RGB3 col) {
             Vec3 v10 = {r1*cosf(phi0), y1, r1*sinf(phi0)};
             Vec3 v11 = {r1*cosf(phi1), y1, r1*sinf(phi1)};
 
-            // At poles one edge degenerates to a point – use triangle
+            //at poles one edge degenerates to a point – use triangle
             if (lat == 0) {
-                // North pole: v00 and v01 converge
+                //north pole, v00 and v01 converge
                 m.addTriangle(v00, v01, v10, col);
                 m.addTriangle(v01, v11, v10, col);
             } else if (lat == latSegs-1) {
-                // South pole
+                //south pole
                 m.addTriangle(v00, v01, v10, col);
                 m.addTriangle(v01, v11, v10, col);
             } else {
@@ -243,14 +198,6 @@ inline Mesh makeSphere(float r, int latSegs, int lonSegs, RGB3 col) {
     m.upload(); return m;
 }
 
-// ---------------------------------------------------------------------------
-// Blade  –  Dutch windmill sail (frame bar + sail panel)
-// A single blade is a flat elongated cuboid.
-// Root at y=0, tip at y=length.
-// Made of a dark outer frame (thick) and lighter inner sail (thin, wider).
-// For simplicity: single cuboid coloured as the blade.
-// Call twice with different colours to make frame + panel separately.
-// ---------------------------------------------------------------------------
 inline Mesh makeBlade(float length, float width, float thick, RGB3 col) {
     Mesh m;
     float hw=width*.5f, ht=thick*.5f;
