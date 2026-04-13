@@ -75,6 +75,8 @@ const RGB3 cFlowerSky         = {0.72f, 0.88f, 1.00f};
 const RGB3 cFlowerPeriwinkle  = {0.74f, 0.80f, 0.98f};
 const RGB3 cFlowerCream       = {1.00f, 0.98f, 0.90f};
 const RGB3 cFlowerBlush       = {0.98f, 0.88f, 0.90f};
+const RGB3 cYellow = {1.0f, 1.0f, 0.0f};
+const RGB3 cBlack  = {0.0f, 0.0f, 0.0f};
 
 static void add(Mesh* m, Mat4 local, bool blade=false) {
     scene.push_back({m, local, blade});
@@ -275,6 +277,49 @@ void buildWindmill() {
         W(mat4::translate(-0.65f, 0.35f, 1.25f)));
     add(new Mesh(makeCuboid(0.25f, 0.7f, 0.25f, cWood)),
         W(mat4::translate( 0.65f, 0.35f, 1.25f)));
+
+float pacX = 0.0f;
+float pacY = 7.0f;
+float pacZ = -12.0f;
+
+//body
+add(new Mesh(makeSphere(3.5f, 32, 32, cYellow)),
+    W(mat4::translate(pacX, pacY, pacZ)));
+
+
+//left eye
+add(new Mesh(makeSphere(0.45f, 12, 12, cBlack)),
+    W(mat4::translate(
+        pacX - 2.5f,
+        pacY + 1.0f,
+        pacZ + 2.0f
+    )));
+
+//right eye
+add(new Mesh(makeSphere(0.45f, 12, 12, cBlack)),
+    W(mat4::translate(
+        pacX + 2.5f,
+        pacY + 1.0f,
+        pacZ + 2.0f
+    )));
+
+    add(new Mesh(makeCone(0.35f, 4.0f, 16, cBlack)),
+    W(
+        mat4::translate(
+            pacX,
+            pacY + 0.1f,
+            pacZ + 3.2f
+        ) *
+        mat4::rotateX(M_PI / 1.9f)
+    ));
+
+    add(new Mesh(makeCuboid(1.6f, 0.25f, 0.2f, cBlack)),
+    W(mat4::translate(
+        pacX,
+        pacY - 1.3f,
+        pacZ + 3.2f
+    )));
+
 }
 
 const char *getError()
