@@ -8,6 +8,9 @@ LIBS = -lglfw -lGLEW -lGL -ldl -lpthread
 main: main.cpp $(files)
 	$(CXX) $(CXXFLAGS) main.cpp $(files) $(LIBS) -o main
 
+dinomain: main.cpp $(files)
+	$(CXX) $(CXXFLAGS) dinomain.cpp $(files) $(LIBS) -o main
+
 run: main
 	./main
 
@@ -16,5 +19,10 @@ clean:
 
 all:
 	$(MAKE) clean
-	$(MAKE)
+	$(MAKE) main
+	$(MAKE) run
+
+dino:
+	$(MAKE) clean
+	$(MAKE) dinomain
 	$(MAKE) run
