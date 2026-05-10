@@ -162,7 +162,7 @@ inline Mesh makeSphere(float r, int latSegs, int lonSegs, RGB3 col) {
     if (lonSegs<4) lonSegs=4;
     Mesh m;
 
-    // latSegs bands between poles → latSegs+1 rings of vertices
+    // latSegs bands between poles, latSegs+1 rings of vertices
     for (int lat=0; lat<latSegs; lat++) {
         float theta0 = (float)M_PI * lat / latSegs;  // 0..PI
         float theta1 = (float)M_PI * (lat+1) / latSegs;
