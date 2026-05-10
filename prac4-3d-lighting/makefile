@@ -1,16 +1,19 @@
-#add all the files that you need to the files makefile variable below as a space seperated list
-files = 
+CXX      = g++
+CXXFLAGS = -std=c++11 -g -Wall -Iinclude
 
-main: main.cpp glad.c
-	g++ -g Shader.cpp $(files) main.cpp glad.c -lglfw3 -pthread -lGLEW -ldl -lGL -o main
+GLAD = $(wildcard glad.c)
+LIBS = -lglfw -lGLEW -lGL -ldl -lpthread
 
-clean:
-	rm -f *.o main
+main: main.cpp shader.cpp $(GLAD)
+	$(CXX) $(CXXFLAGS) main.cpp $(GLAD) shader.cpp $(LIBS) -o main
 
-run:
+run: main
 	./main
 
+clean:
+	rm -f main *.o
+
 all:
-	make clean
-	make
-	make run
+	$(MAKE) clean
+	$(MAKE)
+	$(MAKE) run
