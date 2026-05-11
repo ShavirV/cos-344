@@ -12,16 +12,6 @@
  *  Row spacing = spacing * sin(60°) ≈ spacing * 0.866
  *  Circle radius ≈ spacing * 0.38
  *
- * THREE MAPS:
- *   colour_texture.ppm RGB: dimples are darker (grey circles on lighter bg)
- *   displacement_texture.ppm Greyscale: dimples are black (0=displace inward), surface is white (1=no displacement)
- *   alpha_texture.ppm - Greyscale: dimples are black (0=transparent), surface is white (1=opaque)
- *
- * SAMPLING API:
- *   sampleColour(u, v) – returns normalised RGB float[3]
- *   sampleDisplacement(u,v) – returns float in [0,1]; 0=dimple centre, 1=surface
- *   sampleAlpha(u,v) – returns float in [0,1]; 0=transparent, 1=opaque
- *
  */
 
 #include <cmath>
