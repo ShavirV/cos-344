@@ -1,8 +1,6 @@
 #version 330 core
 
 /*
- * vertex4.glsl  –  P4 Vertex Shader
- * ====================================
  * Handles:
  *   - MVP transform (custom matrices, no GLM math)
  *   - Texture coordinate pass-through
@@ -11,12 +9,6 @@
  *
  * Vertex layout (8 floats): x,y,z, nx,ny,nz, u,v
  *
- * Uniforms:
- *   model, view, projection   – MVP matrices
- *   normalMatrix               – transpose(inverse(model)) for normals
- *   useDisplacement            – bool: displace vertices from texture
- *   dispStrength               – how far to displace (world units)
- *   dispTexture                – displacement texture sampler
  */
 
 layout(location = 0) in vec3 aPos;

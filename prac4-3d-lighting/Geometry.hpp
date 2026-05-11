@@ -4,39 +4,28 @@
 #include <array>
 
 /*
- * Geometry.hpp  –  Runtime-configurable sphere and plane geometry
- * ================================================================
- * Both shapes support runtime vertex-count changes (re-upload on change).
- *
- * Vertex format: [x,y,z, nx,ny,nz, u,v] = 8 floats
- * Attribute locations:
- *   0 = position (vec3)
- *   1 = normal   (vec3)
- *   2 = UV       (vec2)
- *
- * SPHERE
- * ------
- * Standard latitude/longitude tessellation.
- * latSegs = latitude bands (min 4)
- * lonSegs = longitude slices (min 4)
- * UV: u = lon/(2π), v = lat/π  → natural spherical unwrap for dimples
- * Normals: outward unit radial direction
- * Displacement: optionally sampled from TextureGen::sampleDisplacement(u,v)
- *   and applied along the normal at build time (actual surface change, not bump)
- *
- * PLANE
- * -----
- * Grid of (divs × divs) quads in the XZ plane.
- * Normal = (0,1,0) for all vertices.
- * UV: tiled n times across the plane for texture repetition.
- * divs = number of quad subdivisions per axis (min 1).
- *   Higher divs = more vertices = better lighting gradient on floor.
- *
- * WIREFRAME
- * ---------
- * Both meshes store separate wire-index data (edge list).
- * Wireframe uses GL_LINES; each triangle edge is listed once.
- * This satisfies the spec requirement (no glPolygonMode).
+* Vertex format: [x,y,z, nx,ny,nz, u,v] = 8 floats
+*   0 = position (vec3)
+*   1 = normal   (vec3)
+*   2 = UV       (vec2)
+*
+* SPHERE
+* same as prac 3, lat long tesselation 
+* latSegs = latitude bands (min 4)
+* lonSegs = longitude slices (min 4)
+* UV: u = lon/(2pi), v = lat/pi  -> unwrap for dimples
+* Normals: outward unit radial direction
+* Displacement: optionally sampled from TextureGen::sampleDisplacement(u,v)
+*   and applied along the normal 
+*
+* PLANE
+* Grid of (divs × divs) quads in the XZ plane.
+* Normal = (0,1,0) for all vertices.
+* UV: tiled n times across the plane for texture repetition.
+* divs = number of quad subdivisions per axis
+*   Higher divs, more vertices, better lighting gradient on floor.
+*
+* wireframe uses GL_LINESs
  */
 
 #include <vector>
@@ -49,9 +38,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-// ---------------------------------------------------------------------------
-// Helper: push a vertex into a float vector
-// ---------------------------------------------------------------------------
+//push a vertex into a float vector
 static inline void pushVert(std::vector<float>& v,
     float x, float y, float z,
     float nx, float ny, float nz,
@@ -62,9 +49,6 @@ static inline void pushVert(std::vector<float>& v,
     v.push_back(u);  v.push_back(vv);
 }
 
-// ---------------------------------------------------------------------------
-// Sphere
-// ---------------------------------------------------------------------------
 class Sphere {
 public:
     GLuint vao=0, filledVBO=0, wireVBO=0;
@@ -86,19 +70,19 @@ public:
         int ls = std::max(4,latSegs);
         int os = std::max(4,lonSegs);
 
-        // We build a triangle list (not fan) so displacement is per-vertex
+        //We build a tri list so displacement is per-vertex
         for (int lat=0; lat<ls; lat++) {
-            float theta0 = (float)M_PI *  lat      / ls;
+            float theta0 = (float)M_PI *  lat / ls;
             float theta1 = (float)M_PI * (lat + 1) / ls;
 
             for (int lon=0; lon<os; lon++) {
-                float phi0 = 2.0f*(float)M_PI *  lon      / os;
+                float phi0 = 2.0f*(float)M_PI *  lon / os;
                 float phi1 = 2.0f*(float)M_PI * (lon + 1) / os;
 
                 // UV for each corner
-                float u0 = (float)lon       / os;
+                float u0 = (float)lon / os;
                 float u1 = (float)(lon + 1) / os;
-                float v0 = (float)lat        / ls;
+                float v0 = (float)lat / ls;
                 float v1 = (float)(lat + 1)  / ls;
 
                 // Normals (unit sphere, normal = position on unit sphere)
@@ -111,14 +95,13 @@ public:
                 auto n10 = norm(theta1, phi0);
                 auto n11 = norm(theta1, phi1);
 
-                // Position = radius * normal, then displace
-                auto makeVert = [&](std::array<float,3> n, float u, float vv) 
-                    -> std::array<float,8>
+                //position = radius * normal, then displace
+                auto makeVert = [&](std::array<float,3> n, float u, float vv) -> std::array<float,8>
                 {
                     float r = radius;
                     if (applyDisplacement) {
                         float dispVal = TextureGen::sampleDisplacement(u, vv);
-                        r = radius * dispVal;  // dispVal in [0.2..1.0]
+                        r = radius * dispVal;  //dispVal in [0.2..1.0]
                     }
                     return {n[0]*r, n[1]*r, n[2]*r,
                             n[0],   n[1],   n[2],
@@ -130,8 +113,8 @@ public:
                 auto v10 = makeVert(n10, u0, v1);
                 auto v11 = makeVert(n11, u1, v1);
 
-                // Triangle 1: v00, v10, v11
-                // Triangle 2: v00, v11, v01
+                //t1: v00, v10, v11
+                //t2: v00, v11, v01
                 auto push = [&](std::array<float,8>& vd) {
                     for (float f : vd) filled.push_back(f);
                 };
@@ -139,7 +122,7 @@ public:
                 push(v00); push(v10); push(v11);
                 push(v00); push(v11); push(v01);
 
-                // Wire edges (avoid duplicates: only add edge if lon+lat ordering)
+                //wire edges, only add edge if in lat long ordering 
                 auto pushW = [&](std::array<float,8>& a, std::array<float,8>& b) {
                     for (float f : a) wire.push_back(f);
                     for (float f : b) wire.push_back(f);
@@ -165,10 +148,10 @@ public:
         setAttribs();
         glBindVertexArray(0);
 
-        glBindVertexArray(vao); // reuse vao for wire (we'll bind vbo manually in draw)
+        glBindVertexArray(vao); //reuse vao for wire (we'll bind vbo manually in draw)
         glBindVertexArray(0);
 
-        // Store wire data separately  
+        //wire data stored in a separate buffer  
         glBindBuffer(GL_ARRAY_BUFFER, wireVBO);
         glBufferData(GL_ARRAY_BUFFER, wire.size()*sizeof(float),
                      wire.data(), GL_DYNAMIC_DRAW);
@@ -206,9 +189,7 @@ private:
     }
 };
 
-// ---------------------------------------------------------------------------
-// Plane (tessellated grid)
-// ---------------------------------------------------------------------------
+//Plane (tessellated grid)
 class Plane {
 public:
     GLuint vao=0, filledVBO=0, wireVBO=0;
@@ -232,26 +213,26 @@ public:
 
         for (int row=0; row<d; row++) {
             for (int col=0; col<d; col++) {
-                float x0 = -half + col     * step;
+                float x0 = -half + col * step;
                 float x1 = -half + (col+1) * step;
-                float z0 = -half + row     * step;
+                float z0 = -half + row * step;
                 float z1 = -half + (row+1) * step;
 
-                float u0 = (float)col     / d * uvTile;
+                float u0 = (float)col / d * uvTile;
                 float u1 = (float)(col+1) / d * uvTile;
-                float v0 = (float)row     / d * uvTile;
+                float v0 = (float)row / d * uvTile;
                 float v1 = (float)(row+1) / d * uvTile;
 
-                // Y=0, normal upward
+                //Y=0, normal upward
                 auto p = [&](float x,float z,float u,float vv) {
                     pushVert(filled, x,0,z, 0,1,0, u,vv);
                 };
-                // Triangle 1
+                //Triangle 1
                 p(x0,z0,u0,v0); p(x1,z0,u1,v0); p(x1,z1,u1,v1);
-                // Triangle 2
+                //Triangle 2
                 p(x0,z0,u0,v0); p(x1,z1,u1,v1); p(x0,z1,u0,v1);
 
-                // Wire edges
+                //Wire edges
                 auto pw = [&](float xa,float za,float ua,float va,
                                float xb,float zb,float ub,float vb) {
                     pushVert(wire,xa,0,za,0,1,0,ua,va);

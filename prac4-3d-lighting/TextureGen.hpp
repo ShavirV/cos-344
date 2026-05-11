@@ -2,37 +2,26 @@
 #define TEXTUREGEN_HPP
 
 /*
- * TextureGen.hpp  –  Procedural golf-ball texture generation
- * ===========================================================
- * Generates three PPM texture maps programmatically (no external images).
- * All textures use the same dimple layout: a hexagonal-packed grid of
- * circles on a 512×512 canvas.
+ *all textures are a grid of dimples on a 512x512 canvas
+ *hexagonal grid to look more like a real golf ball with offsets
  *
- * WHY PROCEDURAL?
- *   The spec forbids downloading textures. Generating them in C++ lets us
- *   produce mathematically precise dimple patterns and explain the algorithm
- *   during the demo.
  *
- * DIMPLE LAYOUT (hexagonal packing):
- *   Even rows: circles at x = 0, spacing, 2*spacing, ...
- *   Odd rows:  circles at x = spacing/2, 3*spacing/2, ...
- *   Row spacing = spacing * sin(60°) ≈ spacing * 0.866
- *   Circle radius ≈ spacing * 0.38
+ *DIMPLE LAYOUT:
+ *  Even rows: circles at x = 0, spacing, 2*spacing, ...
+ *  Odd rows:  circles at x = spacing/2, 3*spacing/2, ...
+ *  Row spacing = spacing * sin(60°) ≈ spacing * 0.866
+ *  Circle radius ≈ spacing * 0.38
  *
  * THREE MAPS:
- *   colour_texture.ppm     – RGB: dimples are darker (grey circles on lighter bg)
- *   displacement_texture.ppm – Greyscale: dimples are black (0=displace inward),
- *                              surface is white (1=no displacement)
- *   alpha_texture.ppm      – Greyscale: dimples are black (0=transparent),
- *                            surface is white (1=opaque)
+ *   colour_texture.ppm RGB: dimples are darker (grey circles on lighter bg)
+ *   displacement_texture.ppm Greyscale: dimples are black (0=displace inward), surface is white (1=no displacement)
+ *   alpha_texture.ppm - Greyscale: dimples are black (0=transparent), surface is white (1=opaque)
  *
  * SAMPLING API:
- *   sampleColour(u, v)      – returns normalised RGB float[3]
+ *   sampleColour(u, v) – returns normalised RGB float[3]
  *   sampleDisplacement(u,v) – returns float in [0,1]; 0=dimple centre, 1=surface
- *   sampleAlpha(u,v)        – returns float in [0,1]; 0=transparent, 1=opaque
+ *   sampleAlpha(u,v) – returns float in [0,1]; 0=transparent, 1=opaque
  *
- * These are called at sphere vertex build time to apply displacement, and
- * at fragment time the PPM files are loaded as GL textures.
  */
 
 #include <cmath>
@@ -51,10 +40,6 @@ public:
     static const int DIMPLE_SPACING = 48;  // pixels between dimple centres
     static const int DIMPLE_RADIUS  = 18;  // dimple circle radius in pixels
 
-    // -----------------------------------------------------------------------
-    // inDimple(px, py) – returns [0,1] smooth weight; 1 = inside dimple centre
-    // Uses smooth falloff for soft edges (not hard circles)
-    // -----------------------------------------------------------------------
     static float inDimple(int px, int py) {
         float best = 0.0f;
         int spacing = DIMPLE_SPACING;
@@ -71,20 +56,20 @@ public:
                 float dx = px - cx;
                 float dy = py - cy;
                 // Wrap horizontally for seamless tiling
-                if (dx >  TEX_W * 0.5f) dx -= TEX_W;
-                if (dx < -TEX_W * 0.5f) dx += TEX_W;
+                if (dx >  TEX_W * 0.5f) 
+                    dx -= TEX_W;
+                if (dx < -TEX_W * 0.5f) 
+                    dx += TEX_W;
                 float dist = sqrtf(dx*dx + dy*dy);
-                // Smooth step within radius
                 float t = 1.0f - dist / DIMPLE_RADIUS;
-                if (t > best) best = t;
+                if (t > best) 
+                    best = t;
             }
         }
         return (best < 0.0f) ? 0.0f : (best > 1.0f) ? 1.0f : best;
     }
 
-    // -----------------------------------------------------------------------
     // Generate colour texture: light grey bg, darker grey dimples
-    // -----------------------------------------------------------------------
     static void writeColourTexture(const char* filename) {
         FILE* f = fopen(filename, "wb");
         if (!f) { fprintf(stderr, "Cannot open %s\n", filename); return; }
@@ -104,9 +89,8 @@ public:
         printf("Written: %s\n", filename);
     }
 
-    // -----------------------------------------------------------------------
+
     // Generate displacement texture: white=no displacement, black=push inward
-    // -----------------------------------------------------------------------
     static void writeDisplacementTexture(const char* filename) {
         FILE* f = fopen(filename, "wb");
         if (!f) { fprintf(stderr, "Cannot open %s\n", filename); return; }
@@ -126,9 +110,7 @@ public:
         printf("Written: %s\n", filename);
     }
 
-    // -----------------------------------------------------------------------
     // Generate alpha texture: white=opaque, black=transparent (dimple holes)
-    // -----------------------------------------------------------------------
     static void writeAlphaTexture(const char* filename) {
         FILE* f = fopen(filename, "wb");
         if (!f) { fprintf(stderr, "Cannot open %s\n", filename); return; }
@@ -147,9 +129,8 @@ public:
         printf("Written: %s\n", filename);
     }
 
-    // -----------------------------------------------------------------------
+
     // Load a PPM P6 file as an OpenGL texture, return texture ID
-    // -----------------------------------------------------------------------
     static unsigned int loadPPM(const char* filename) {
         FILE* f = fopen(filename, "rb");
         if (!f) { fprintf(stderr, "Cannot open texture: %s\n", filename); return 0; }
@@ -181,11 +162,9 @@ public:
         return texID;
     }
 
-    // -----------------------------------------------------------------------
     // Analytical sampling (for CPU-side displacement at vertex build time)
-    // u,v in [0,1] UV space → displacement value in [0,1]
+    // u,v in [0,1] UV space -> displacement value in [0,1]
     // 0 = dimple centre (maximum inward), 1 = surface (no displacement)
-    // -----------------------------------------------------------------------
     static float sampleDisplacement(float u, float v) {
         int px = (int)(u * TEX_W) % TEX_W;
         int py = (int)(v * TEX_H) % TEX_H;
@@ -196,9 +175,8 @@ public:
         return 1.0f - dcos * 0.8f;  // [0.2 .. 1.0], 0.2 at deepest dimple
     }
 
-    // -----------------------------------------------------------------------
+
     // Generate all three textures and return; call once at startup
-    // -----------------------------------------------------------------------
     static void generateAll() {
         writeColourTexture("colour_texture.ppm");
         writeDisplacementTexture("displacement_texture.ppm");
